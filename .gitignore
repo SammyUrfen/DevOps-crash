@@ -1,0 +1,4 @@
+bin/
+.env
+.playwright-mcp/
+*.png

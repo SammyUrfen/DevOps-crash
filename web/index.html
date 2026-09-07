@@ -1,0 +1,84 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DevOps Crash — Tasks</title>
+<style>
+  :root { color-scheme: light dark; --line: #8883; }
+  body { max-width: 40rem; margin: 3rem auto; padding: 0 1rem;
+         font: 16px/1.5 system-ui, sans-serif; }
+  h1 { font-size: 1.3rem; }
+  form { display: flex; gap: .5rem; margin-bottom: 1.5rem; }
+  input[type=text] { flex: 1; padding: .5rem; border: 1px solid var(--line);
+                     border-radius: 6px; background: none; color: inherit; }
+  button { padding: .5rem .9rem; border: 1px solid var(--line);
+           border-radius: 6px; background: none; color: inherit; cursor: pointer; }
+  li { display: flex; align-items: center; gap: .6rem; padding: .4rem 0;
+       border-bottom: 1px solid var(--line); }
+  ul { list-style: none; padding: 0; }
+  .title { flex: 1; }
+  .done .title { opacity: .5; text-decoration: line-through; }
+  #err { color: #d33; min-height: 1.4rem; }
+</style>
+
+<h1>Tasks</h1>
+<form id="new"><input type="text" id="title" placeholder="New task" required maxlength="200"><button>Add</button></form>
+<div id="err"></div>
+<ul id="list"></ul>
+
+<script>
+const list = document.getElementById('list');
+const err  = document.getElementById('err');
+
+async function api(method, path, body) {
+  const res = await fetch(path, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : {},
+    body: body ? JSON.stringify(body) : null,
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+  return res.status === 204 ? null : res.json();
+}
+
+function render(tasks) {
+  list.replaceChildren(...tasks.map(t => {
+    const li = document.createElement('li');
+    li.className = t.done ? 'done' : '';
+
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = t.done;
+    box.onchange = () => run(() => api('PUT', `/api/tasks/${t.id}`, { title: t.title, done: box.checked }));
+
+    const span = document.createElement('span');
+    span.className = 'title';
+    span.textContent = t.title;
+    span.title = 'Click to rename';
+    span.onclick = () => {
+      const title = prompt('Rename', t.title);
+      if (title !== null) run(() => api('PUT', `/api/tasks/${t.id}`, { title, done: t.done }));
+    };
+
+    const del = document.createElement('button');
+    del.textContent = '×';
+    del.onclick = () => run(() => api('DELETE', `/api/tasks/${t.id}`));
+
+    li.append(box, span, del);
+    return li;
+  }));
+}
+
+async function run(fn) {
+  err.textContent = '';
+  try { if (fn) await fn(); render(await api('GET', '/api/tasks')); }
+  catch (e) { err.textContent = e.message; }
+}
+
+document.getElementById('new').onsubmit = e => {
+  e.preventDefault();
+  const input = document.getElementById('title');
+  const title = input.value;
+  run(() => api('POST', '/api/tasks', { title, done: false }).then(() => input.value = ''));
+};
+
+run();
+</script>
