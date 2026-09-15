@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:17-alpine
+    image: postgres:17.11-alpine  # same tag as .github/workflows/ci.yml
     environment:
       POSTGRES_USER: devops
       POSTGRES_PASSWORD: devops

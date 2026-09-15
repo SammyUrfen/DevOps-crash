@@ -17,8 +17,8 @@ build:  ## Compile the server
 test:  ## Run the unit tests under the race detector
 	go test -race -count=1 ./...
 
-lint:  ## Format and vet
-	gofmt -l .
+lint:  ## Fail on unformatted files, then vet
+	@test -z "$$(gofmt -l .)" || { echo "gofmt needed:"; gofmt -l .; exit 1; }
 	go vet ./...
 
 check: lint test  ## Run lint and test

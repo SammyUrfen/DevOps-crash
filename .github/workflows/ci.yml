@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch makes the older run useless. Cancel it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, test, build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      # go.mod pins the toolchain, so CI and the laptop use the same Go.
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Lint
+        run: make lint
+
+      - name: Test
+        run: make test
+
+      - name: Build
+        run: make build
+
+  smoke:
+    name: Smoke test against Postgres
+    needs: check
+    runs-on: ubuntu-24.04
+
+    # The same image tag as docker-compose.yml. Change both together.
+    services:
+      postgres:
+        image: postgres:17.11-alpine
+        env:
+          POSTGRES_USER: devops
+          POSTGRES_PASSWORD: devops
+          POSTGRES_DB: devops
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U devops"
+          --health-interval 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: make build
+
+      # The server runs in the background for the rest of the job.
+      # The runner stops it when the job ends.
+      - name: Start the server
+        run: |
+          ./bin/server > server.log 2>&1 &
+          for _ in $(seq 30); do
+            curl -sf http://localhost:8080/readyz && exit 0
+            sleep 1
+          done
+          echo "the server did not become ready in 30 seconds"
+          cat server.log
+          exit 1
+
+      - name: Smoke test
+        run: ./smoke.sh
+
+      - name: Server log
+        if: always()
+        run: cat server.log
