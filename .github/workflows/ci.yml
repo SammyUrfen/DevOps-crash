@@ -44,9 +44,9 @@ jobs:
       postgres:
         image: postgres:17.11-alpine
         env:
-          POSTGRES_USER: devops
-          POSTGRES_PASSWORD: devops
-          POSTGRES_DB: devops
+          POSTGRES_USER: ${{ postgres.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ postgres.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ postgres.POSTGRES_DB }}
         ports:
           - 5432:5432
         options: >-
