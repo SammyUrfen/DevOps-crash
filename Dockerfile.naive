@@ -1,0 +1,14 @@
+# The naive build: one stage. The whole Go toolchain ships inside the image.
+# This file exists only to measure the difference against the real Dockerfile.
+# Delete it after step 1.
+FROM golang:1.26.5
+
+WORKDIR /src
+
+# Copy everything, then build. No cache split, no .dockerignore yet.
+# You will see both costs in the build output.
+COPY . .
+RUN go build -o /server ./cmd/server
+
+EXPOSE 8080
+CMD ["/server"]

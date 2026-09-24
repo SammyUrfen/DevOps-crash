@@ -1,0 +1,12 @@
+# The build context is everything Docker sends to the daemon before it builds.
+# Without this file the 31 MB bin/ directory went along for the ride.
+bin/
+.git/
+.github/
+*.md
+.env
+Dockerfile*
+docker-compose.yml
+smoke.sh
+.playwright-mcp/
+*.png
